@@ -1,6 +1,14 @@
 CKEDITOR.dialog.add("simpleimageDialog", function(editor) {
-	var proportionalScale, isSizePreload;
+	var proportionalScale, isSizePreload, isBase64Allowed, validationMessage;
 	isSizePreload = false;
+	isBase64Allowed = CKEDITOR.config.simpleImageBase64allowed || false;
+	validationMessage = isBase64Allowed ? "Source cannot be empty." : "Source can neither be empty nor have Base64 format. Type an external url."
+
+
+	function isBase64URL(url) {
+		return /data\:image/.test(url);
+	}
+
 
 	return {
 		allowedContent: "img[src,alt,width,height]",
@@ -15,7 +23,7 @@ CKEDITOR.dialog.add("simpleimageDialog", function(editor) {
 				type: "text",
 				label: "Source",
 				id: "edp-src",
-				validate: CKEDITOR.dialog.validate.notEmpty( "source cannot be empty." ),
+				validate: CKEDITOR.dialog.validate.notEmpty( validationMessage ),
 				setup: function (element) {
 					if(element.getAttribute("src")) {
 						if(element.getAttribute("width") && element.getAttribute("height")) {
@@ -28,19 +36,25 @@ CKEDITOR.dialog.add("simpleimageDialog", function(editor) {
 					element.setAttribute("src", this.getValue());
 				},
 				onChange: function () {
-					if(!isSizePreload) {
-						var img = new Image();
-						var dialog = this.getDialog();
-						img.onload = function(f) {
-							if(f) {
-								proportionalScale = this.width/this.height;
-								dialog.setValueOf("Dimensions","edp-width", this.width);
-								dialog.setValueOf("Dimensions","edp-height", this.height);
-							}
-						};
-						img.src = this.getValue();
-					} else {
-						isSizePreload = false;
+					if(isBase64URL(this.getValue())) {
+						if(!isBase64Allowed) {
+							this.setValue("");
+							return;
+						}
+						if(!isSizePreload) {
+							var img = new Image();
+							var dialog = this.getDialog();
+							img.onload = function(f) {
+								if(f) {
+									proportionalScale = this.width/this.height;
+									dialog.setValueOf("Dimensions","edp-width", this.width);
+									dialog.setValueOf("Dimensions","edp-height", this.height);
+								}
+							};
+							img.src = this.getValue();
+						} else {
+							isSizePreload = false;
+						}
 					}
 				}			
 			}, {
